@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import whois
 from datetime import datetime, timezone # Import timezone
 from dotenv import load_dotenv
+import pathlib
 
 load_dotenv() # Reads from your .env file
 
