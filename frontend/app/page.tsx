@@ -37,6 +37,7 @@ interface AnalysisResult {
 }
 
 // 2. Icon & Text Styling Helper (Checks for "WHOIS Check:" label)
+// 2. Icon & Text Styling Helper (FIXED ESLint errors)
 const ReportItem = ({ text, label }: { text: string; label?: string }) => {
   let IconComponent: React.ElementType | null = null;
   let textColor = 'text-zinc-300'; // Default text color
@@ -46,12 +47,11 @@ const ReportItem = ({ text, label }: { text: string; label?: string }) => {
   const isBrokenLink = text.includes('Link is broken or invalid') || text.includes('Link Redirect: Link is broken');
   const isDanger = text.includes('🚨 DANGER') || text.includes('🚨 DANGEROUS');
   const isSuspicious = text.includes('⚠️ SUSPICIOUS') || text.includes('⚠️ Warning');
-  const isOkStatus = !(isDanger || isSuspicious || isBrokenLink);
+  // REMOVED isOkStatus as it's implicitly handled below
 
   // --- Determine Icon and Color using switch based on Label ---
   switch (label) {
-      // UPDATED LABEL CHECK
-      case 'WHOIS Check:':
+      case 'ScamShieldAI Lookup:':
           IconComponent = Info; // Always Info icon for this label
           if (isDanger) textColor = 'text-red-400';
           else if (isSuspicious) textColor = 'text-yellow-400';
@@ -61,7 +61,7 @@ const ReportItem = ({ text, label }: { text: string; label?: string }) => {
       case 'Google Search:':
           if (isDanger) { IconComponent = AlertCircle; textColor = 'text-red-400'; }
           else if (isSuspicious) { IconComponent = AlertTriangle; textColor = 'text-yellow-400'; }
-          else { // Google OK
+          else { // Google OK (implicitly isOkStatus is true here)
               IconComponent = GoogleLogo;
               textColor = 'text-zinc-400';
               iconSize = 'w-4 h-4';
@@ -76,16 +76,15 @@ const ReportItem = ({ text, label }: { text: string; label?: string }) => {
           if (isDanger) { IconComponent = AlertCircle; textColor = 'text-red-400'; }
           else if (isSuspicious) { IconComponent = AlertTriangle; textColor = 'text-yellow-400'; }
           else if (isBrokenLink) { IconComponent = Unlink; textColor = 'text-zinc-500'; }
-          else { IconComponent = CheckCircle; textColor = 'text-emerald-400'; }
+          else { IconComponent = CheckCircle; textColor = 'text-emerald-400'; } // Default OK
           break;
   }
 
 
-  // --- Clean Text ---
-  let cleanText = text
+  // --- Clean Text (FIXED: Use const) ---
+  const cleanText = text // <-- Changed 'let' to 'const'
     .replace(/^[🚨⚠️✅]\s*/, '')
-    // Remove backend prefixes before displaying
-    .replace(/^(Google Check:|Google Search:|WHOIS Check:|Link Redirect:|ScamShieldAI Lookup:)\s*/, ''); // Keep WHOIS Check here for cleaning old backend responses if needed
+    .replace(/^(Google Check:|Google Search:|WHOIS Check:|Link Redirect:|ScamShieldAI Lookup:)\s*/, '');
 
   const displayLabel = label || '';
 
@@ -100,12 +99,11 @@ const ReportItem = ({ text, label }: { text: string; label?: string }) => {
       {/* Main Text Styling */}
       <p
         className={`text-sm ${
-          // Adjust based on the FINAL textColor set above
-          textColor === 'text-zinc-500' ? 'text-zinc-400' // Broken link
-          : textColor === 'text-zinc-400' ? 'text-zinc-300' // Google OK
-          : textColor === 'text-blue-400' ? 'text-zinc-300' // WHOIS OK
-          : textColor === 'text-emerald-400' ? 'text-zinc-300' // Other OK (like Redirect)
-          : 'text-zinc-300' // Default
+          textColor === 'text-zinc-500' ? 'text-zinc-400'
+          : textColor === 'text-zinc-400' ? 'text-zinc-300'
+          : textColor === 'text-blue-400' ? 'text-zinc-300'
+          : textColor === 'text-emerald-400' ? 'text-zinc-300'
+          : 'text-zinc-300'
         }`}
         dangerouslySetInnerHTML={{
           __html: cleanText
@@ -122,7 +120,6 @@ const ReportItem = ({ text, label }: { text: string; label?: string }) => {
     </div>
   );
 };
-
 
 // 3. Helper for Verdict Icon & Text Color + Icon Glow (Same status colors)
 const getVerdictStyles = (verdict: string) => {
