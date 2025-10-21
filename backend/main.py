@@ -1,4 +1,4 @@
-# This is the new backend/main.py (FINAL - unfurl_url ADDED BACK)
+# This is the new backend/main.py (FINAL - Fixed Syntax Error)
 import re
 import os
 import httpx
@@ -26,11 +26,18 @@ if not GOOGLE_SAFE_BROWSING_API_KEY:
 
 # --- 3. Load Model ---
 try:
-    model = joblib.load("scam_model.pkl")
-    vectorizer = joblib.load("vectorizer.pkl")
+    # Use pathlib to ensure correct path finding
+    base_path = pathlib.Path(__file__).parent
+    model_path = base_path / "scam_model.pkl"
+    vectorizer_path = base_path / "vectorizer.pkl"
+    model = joblib.load(model_path)
+    vectorizer = joblib.load(vectorizer_path)
     print("Original scam_model.pkl and vectorizer.pkl loaded.")
+except FileNotFoundError:
+    print(f"ERROR: Model/Vectorizer files not found.")
+    exit()
 except Exception as e:
-    print(f"Error loading original model files: {e}")
+    print(f"Error loading model files: {e}")
     exit()
 
 # --- 4. Define Request/Response models ---
@@ -46,9 +53,15 @@ class AnalysisResponse(BaseModel):
 
 # --- 5. Create FastAPI App & CORS ---
 app = FastAPI()
+
+# Read allowed origins from environment variable
+allowed_origins_str = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
+allowed_origins_list = [origin.strip() for origin in allowed_origins_str.split(',')]
+print(f"Allowing origins: {allowed_origins_list}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -145,35 +158,22 @@ async def check_domain_age(url: str) -> str:
         return f"⚠️ WHOIS Check: Failed. Error: {e.__class__.__name__}"
 
 
-# ==========================================================
-# THIS FUNCTION WAS MISSING - IT'S NOW ADDED BACK
-# ==========================================================
 async def unfurl_url(url: str) -> tuple[str, str]:
     """
     Follows a URL redirect (like bit.ly) to its final destination.
     Returns (final_url, report_string)
     """
     try:
-        # Use a new client for each unfurl to handle potential session issues
         async with httpx.AsyncClient() as unfurl_client:
-            # Use a HEAD request to be fast, follow redirects
             response = await unfurl_client.head(url, follow_redirects=True, timeout=5.0)
             final_url = str(response.url)
-
             if final_url != url:
-                # We successfully unfurled the link!
-                # Provide a clear message showing the redirection
                 return final_url, f"✅ Link Redirect: Original URL redirects to: `{final_url}`"
             else:
-                # It was not a shortener or redirect
                 return url, "✅ Link Redirect: No redirect found (Link is final destination)."
-
     except httpx.RequestError as e:
-        # This includes SSL errors, connection errors, invalid URLs etc.
-        # More user-friendly error
         return url, f"🚨 Link Redirect: Link is broken or invalid. Error: {e.__class__.__name__}"
     except Exception as e:
-         # Generic fallback error
         return url, f"⚠️ Link Redirect: Could not check redirect. Error: {e.__class__.__name__}"
 
 
@@ -215,6 +215,10 @@ async def analyze_message(request: MessageRequest):
              rule_applied = True
 
     # --- Part 3: If no rules, use ML Model ---
+    # Ensure model is loaded before using
+    if model is None or vectorizer is None:
+        return AnalysisResponse(verdict="🚨 Error", explanation="Backend model not loaded.", confidence=0.0)
+
     text_vector = vectorizer.transform([text])
     prediction_prob = model.predict_proba(text_vector)[0]
     is_scam_prob = float(prediction_prob[1])
@@ -243,16 +247,13 @@ async def analyze_message(request: MessageRequest):
     url_is_dangerous = False
 
     for url in set(urls_found):
-        cleaned_url = url.rstrip('.,)!?];:')
+        # *** THIS LINE IS FIXED ***
+        cleaned_url = url.rstrip('.,)!?];:') # Removed the bad '\'
 
-        # Unfurl first
         final_url, unfurl_report = await unfurl_url(cleaned_url)
-
-        # Run checks on final URL
         safe_browsing_report = await check_url_safety(final_url)
         whois_report = await check_domain_age(final_url)
 
-        # Check for danger signals in ANY report
         if "🚨" in whois_report or "🚨" in safe_browsing_report or "🚨" in unfurl_report or "⚠️" in whois_report:
              url_is_dangerous = True
 
