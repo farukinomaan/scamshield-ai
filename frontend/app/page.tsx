@@ -159,24 +159,36 @@ export default function Home() {
     setIsLoading(true);
     setResult(null);
     setError(null);
+    
     try {
-      const response = await fetch('http://127.0.0.1:8000/analyze', {
+      // Read backend URL from environment variable
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      
+      // Optional: Log for debugging (remove in production)
+      console.log('Fetching from:', `${apiUrl}/analyze`);
+      
+      const response = await fetch(`${apiUrl}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: message }),
       });
-      if (!response.ok) throw new Error('Network response was not ok');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data: AnalysisResult = await response.json();
       setResult(data);
-    } catch {
+    } catch (err) {
+      console.error('Fetch error:', err);
       setError(
-        'Could not connect to the analysis service. Is the backend running and CORS configured?'
+        'Could not connect to the analysis service. Please try again later.'
       );
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   // 6. The TSX (HTML) with minimal colors & single border input & URL fix
   return (
     <main className="flex flex-col items-center px-4 py-16 sm:px-6 lg:px-8 bg-zinc-950 text-zinc-100 relative overflow-hidden min-h-screen">
