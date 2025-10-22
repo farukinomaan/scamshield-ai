@@ -162,8 +162,7 @@ export default function Home() {
     
     try {
       // Read backend URL from environment variable
-      // Temporary hardcode - REPLACE THIS URL WITH YOUR ACTUAL RENDER URL
-const apiUrl = 'https://scamshield-ai.onrender.com';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       
       // Optional: Log for debugging (remove in production)
       console.log('Fetching from:', `${apiUrl}/analyze`);
