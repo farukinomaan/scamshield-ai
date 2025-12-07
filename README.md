@@ -4,7 +4,7 @@
 
 [ScamShield AI] is a full-stack web application designed to proactively detect and analyze scams from text messages. It combines a machine-learning model with real-time external API checks to provide a comprehensive, easy-to-understand verdict on whether a message is safe, suspicious, or a high-risk scam.
 
-Please wait for few minutes as serves is asleep
+Please wait for few minutes as server is asleep
 
 ## ✨ Features
 
